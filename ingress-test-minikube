@@ -1,1 +1,54 @@
+Set up Ingress on Minikube with the NGINX Ingress Controller
 
+run minikube start
+minikube addons enable ingress
+kubectl get pods -n ingress-nginx
+kubectl create deployment web --image=gcr.io/google-samples/hello-app:1.0
+kubectl expose deployment web --type=NodePort --port=8080
+kubectl get service web
+minikube service web --url (The output is similar to: http://172.17.0.15:31637)
+curl http://172.17.0.15:31637 
+Create example-ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: hello-world.info
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 8080
+
+kubectl apply -f https://k8s.io/examples/service/networking/example-ingress.yaml
+
+Verify the IP address is set:
+
+kubectl get ingress
+Note: This can take a couple of minutes.
+You should see an IPv4 address in the ADDRESS column; for example:
+
+NAME              CLASS    HOSTS              ADDRESS        PORTS   AGE
+example-ingress   <none>   hello-world.info   172.17.0.15    8
+
+Verify that the Ingress controller is directing traffic:
+
+curl --resolve "hello-world.info:80:$( minikube ip )" -i http://hello-world.info
+
+You can also visit hello-world.info from your browser.
+
+Optionally Look up the external IP address as reported by minikube:
+
+minikube ip
+Add line similar to the following one to the bottom of the /etc/hosts file on your computer (you will need administrator access):
+
+172.17.0.15 hello-world.info
